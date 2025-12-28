@@ -6,72 +6,248 @@
     <title>Zip Extractor Tool</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 20px; background: #f4f4f9; display: flex; flex-direction: column; align-items: center; }
-        .container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-        h2 { color: #333; margin-top: 0; }
-        input[type="file"] { margin: 20px 0; width: 100%; }
-        #fileList { margin-top: 20px; width: 100%; }
-        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; font-size: 14px; }
-        .download-btn { background: #007bff; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; text-decoration: none; }
-        .download-btn:hover { background: #0056b3; }
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background: var(--card-bg);
+            padding: 32px;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin: 0;
+            color: var(--text-main);
+            letter-spacing: -0.025em;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 8px;
+        }
+
+        .upload-card {
+            border: 2px dashed #e2e8f0;
+            border-radius: 16px;
+            padding: 40px 20px;
+            text-align: center;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            background: #fdfdfd;
+        }
+
+        .upload-card:hover {
+            border-color: var(--primary);
+            background: #f5f3ff;
+        }
+
+        .upload-card svg {
+            width: 48px;
+            height: 48px;
+            color: var(--primary);
+            margin-bottom: 12px;
+        }
+
+        #zipInput { display: none; }
+
+        .btn-all {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: none;
+            font-size: 1rem;
+        }
+
+        .btn-all:hover { background: var(--primary-hover); }
+
+        #fileList {
+            margin-top: 24px;
+            border-top: 1px solid #f1f5f9;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .file-icon {
+            background: #eff6ff;
+            color: #3b82f6;
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .file-details {
+            flex-grow: 1;
+            min-width: 0;
+        }
+
+        .file-name {
+            font-size: 0.875rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .dl-small {
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .dl-small:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        #status {
+            margin-top: 16px;
+            font-size: 0.85rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>📦 Zip Extractor</h2>
-    <p>Select a .zip file to extract its contents.</p>
-    <input type="file" id="zipInput" accept=".zip">
+    <header>
+        <h1>📦 Zip Extractor</h1>
+        <p>Local, secure, mobile extraction</p>
+    </header>
+    
+    <label class="upload-card" for="zipInput">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+        <div><strong>Tap to upload</strong></div>
+        <div style="font-size: 0.8rem; color: #94a3b8;">Supports .zip files</div>
+        <input type="file" id="zipInput" accept=".zip">
+    </label>
+
+    <div id="status"></div>
+    <button id="dlAllBtn" class="btn-all">Download All Files</button>
     <div id="fileList"></div>
 </div>
 
 <script>
-    document.getElementById('zipInput').addEventListener('change', async (e) => {
+    const zipInput = document.getElementById('zipInput');
+    const fileListDiv = document.getElementById('fileList');
+    const status = document.getElementById('status');
+    const dlAllBtn = document.getElementById('dlAllBtn');
+    let extractedFiles = {};
+
+    zipInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        const fileListDiv = document.getElementById('fileList');
-        fileListDiv.innerHTML = 'Processing...';
-
+        status.textContent = "Processing archive...";
+        fileListDiv.innerHTML = "";
+        dlAllBtn.style.display = "none";
+        
         const zip = new JSZip();
         try {
             const contents = await zip.loadAsync(file);
-            fileListDiv.innerHTML = '<strong>Files found:</strong>';
+            extractedFiles = contents.files;
+            
+            const fileCount = Object.keys(extractedFiles).filter(k => !extractedFiles[k].dir).length;
+            status.textContent = `Extracted ${fileCount} files`;
+            
+            if (fileCount > 0) dlAllBtn.style.display = "block";
 
-            Object.keys(contents.files).forEach(filename => {
-                if (contents.files[filename].dir) return; // Skip directories
+            Object.keys(extractedFiles).forEach(filename => {
+                if (extractedFiles[filename].dir) return;
 
                 const item = document.createElement('div');
                 item.className = 'file-item';
-                
-                const nameSpan = document.createElement('span');
-                nameSpan.textContent = filename;
-
-                const btn = document.createElement('button');
-                btn.className = 'download-btn';
-                btn.textContent = 'Download';
-                btn.onclick = () => downloadFile(contents.files[filename]);
-
-                item.appendChild(nameSpan);
-                item.appendChild(btn);
+                item.innerHTML = `
+                    <div class="file-icon">📄</div>
+                    <div class="file-details">
+                        <div class="file-name">${filename}</div>
+                    </div>
+                    <button class="dl-small" onclick="downloadSingle('${filename}')">Save</button>
+                `;
                 fileListDiv.appendChild(item);
             });
         } catch (err) {
-            fileListDiv.innerHTML = 'Error: Not a valid zip file.';
+            status.textContent = "Error: Invalid zip file.";
         }
     });
 
-    async function downloadFile(zipEntry) {
-        const blob = await zipEntry.async("blob");
+    async function downloadSingle(name) {
+        const blob = await extractedFiles[name].async("blob");
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = zipEntry.name.split('/').pop();
+        a.download = name.split('/').pop();
         document.body.appendChild(a);
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
     }
+
+    dlAllBtn.onclick = async () => {
+        const keys = Object.keys(extractedFiles).filter(k => !extractedFiles[k].dir);
+        for (const filename of keys) {
+            await downloadSingle(filename);
+            await new Promise(r => setTimeout(r, 400)); // Mobile safety delay
+        }
+    };
 </script>
 
 </body>
