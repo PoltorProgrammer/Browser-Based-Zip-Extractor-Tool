@@ -63,7 +63,12 @@
             width: 100%; margin-top: 20px; cursor: pointer; display: none;
         }
 
-        #status { margin-top: 20px; font-weight: 600; color: var(--primary); font-size: 0.85rem; }
+        #status { margin-top: 20px; font-weight: 600; color: var(--primary); font-size: 0.85rem; min-height: 1.2em; }
+        
+        .progress-bar {
+            width: 0%; height: 4px; background: var(--primary);
+            border-radius: 2px; margin-top: 10px; transition: width 0.2s;
+        }
     </style>
 </head>
 <body>
@@ -73,12 +78,13 @@
     <h1>Direct Extractor</h1>
     <p class="subtitle">Extract files directly into a folder on your device.</p>
 
-    <label class="upload-zone" for="zipInput">
+    <label class="upload-zone" id="dropZone" for="zipInput">
         <strong>Tap to select .zip</strong>
         <input type="file" id="zipInput" accept=".zip">
     </label>
 
     <div id="status">Ready</div>
+    <div id="progressBar" class="progress-bar"></div>
     <button id="extractBtn" class="btn-action">Select Destination & Extract</button>
 </div>
 
@@ -86,61 +92,86 @@
     const zipInput = document.getElementById('zipInput');
     const status = document.getElementById('status');
     const extractBtn = document.getElementById('extractBtn');
+    const progressBar = document.getElementById('progressBar');
     let zipData = null;
 
     zipInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        status.textContent = "Loading archive...";
+        status.textContent = "Analyzing archive...";
         const zip = new JSZip();
         try {
             zipData = await zip.loadAsync(file);
-            status.textContent = "Archive loaded. Ready to extract.";
+            status.textContent = "Archive loaded. Tap button to pick folder.";
             extractBtn.style.display = "block";
         } catch (err) {
             status.textContent = "Error: Invalid Zip file.";
         }
     });
 
+    async function verifyPermission(fileHandle, readWrite) {
+        const options = {};
+        if (readWrite) { options.mode = 'readwrite'; }
+        if ((await fileHandle.queryPermission(options)) === 'granted') { return true; }
+        if ((await fileHandle.requestPermission(options)) === 'granted') { return true; }
+        return false;
+    }
+
     extractBtn.onclick = async () => {
         if (!window.showDirectoryPicker) {
-            alert("Your browser does not support direct folder access. Please use Chrome or Safari 15.2+.");
+            alert("This browser doesn't support direct folder writing. Try Chrome (Android) or Safari (iOS 15.2+).");
             return;
         }
 
         try {
-            // 1. Ask user to pick a folder
             const directoryHandle = await window.showDirectoryPicker();
-            status.textContent = "Extracting... Please stay on this page.";
             
-            const files = zipData.files;
-            
-            for (const path in files) {
-                if (files[path].dir) continue;
+            // Explicitly ask for permission before starting
+            const hasPermission = await verifyPermission(directoryHandle, true);
+            if (!hasPermission) {
+                status.textContent = "Permission denied.";
+                return;
+            }
 
-                // Split path into parts to handle subfolders
+            const files = Object.keys(zipData.files).filter(path => !zipData.files[path].dir);
+            const totalFiles = files.length;
+            let processed = 0;
+
+            status.textContent = `Starting extraction of ${totalFiles} files...`;
+            
+            for (const path of files) {
                 const parts = path.split('/');
                 const fileName = parts.pop();
                 let currentHandle = directoryHandle;
 
-                // Create subfolders if they don't exist
+                // Build subfolder tree
                 for (const part of parts) {
+                    if (part.trim() === "") continue;
                     currentHandle = await currentHandle.getDirectoryHandle(part, { create: true });
                 }
 
-                // Create file and write content
+                // Write file
                 const fileHandle = await currentHandle.getFileHandle(fileName, { create: true });
                 const writable = await fileHandle.createWritable();
-                const content = await files[path].async("blob");
+                const content = await zipData.files[path].async("blob");
                 await writable.write(content);
                 await writable.close();
+
+                processed++;
+                const percent = Math.round((processed / totalFiles) * 100);
+                progressBar.style.width = percent + "%";
+                status.textContent = `Extracting: ${percent}%`;
+                
+                // Crucial for mobile: Small breathing room for the main thread
+                if (processed % 5 === 0) await new Promise(r => setTimeout(r, 50));
             }
 
-            status.textContent = "✅ Extraction Complete! Check your folder.";
+            status.textContent = "✅ Success! Files extracted to folder.";
+            progressBar.style.width = "100%";
         } catch (err) {
             console.error(err);
-            status.textContent = "Extraction cancelled or failed.";
+            status.textContent = "Extraction stopped. Ensure you granted 'Edit' access.";
         }
     };
 </script>
