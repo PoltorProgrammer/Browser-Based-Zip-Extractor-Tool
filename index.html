@@ -3,167 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zip Extractor Tool</title>
+    <title>Zip to Folder Pro</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary: #6366f1;
-            --primary-hover: #4f46e5;
-            --bg: #f8fafc;
-            --card-bg: #ffffff;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
+            --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            --glass: rgba(255, 255, 255, 0.9);
+            --text-dark: #0f172a;
+            --text-slate: #64748b;
         }
 
         body {
-            font-family: 'Inter', -apple-system, system-ui, sans-serif;
-            background-color: var(--bg);
-            color: var(--text-main);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-dark);
             margin: 0;
             display: flex;
             justify-content: center;
-            align-items: flex-start;
+            align-items: center;
             min-height: 100vh;
             padding: 20px;
-            box-sizing: border-box;
         }
 
-        .container {
+        .app-card {
             width: 100%;
-            max-width: 480px;
-            background: var(--card-bg);
-            padding: 32px;
-            border-radius: 24px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-        }
-
-        header { text-align: center; margin-bottom: 24px; }
-        h1 { font-size: 1.5rem; margin: 0; letter-spacing: -0.025em; }
-        header p { color: var(--text-muted); font-size: 0.9rem; margin-top: 8px; }
-
-        .upload-card {
-            border: 2px dashed #e2e8f0;
-            border-radius: 16px;
-            padding: 40px 20px;
+            max-width: 440px;
+            background: var(--glass);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            padding: 40px 30px;
+            border-radius: 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.1);
             text-align: center;
-            transition: all 0.2s ease;
-            cursor: pointer;
-            background: #fdfdfd;
-            display: block;
         }
 
-        .upload-card:hover { border-color: var(--primary); background: #f5f3ff; }
+        .logo-icon {
+            width: 64px; height: 64px; background: white; border-radius: 20px;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 20px; box-shadow: 0 10px 15px -3px rgba(99, 102, 241, 0.2);
+            font-size: 32px;
+        }
 
+        h1 { font-size: 1.5rem; font-weight: 700; margin: 0; }
+        p.subtitle { color: var(--text-slate); font-size: 0.9rem; margin: 10px 0 25px; }
+
+        .upload-zone {
+            display: block; border: 2px dashed #cbd5e1; border-radius: 24px;
+            padding: 40px 20px; transition: 0.3s; cursor: pointer;
+        }
+
+        .upload-zone:hover { border-color: var(--primary); background: white; }
         #zipInput { display: none; }
 
-        .btn-all {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 14px;
-            border-radius: 12px;
-            font-weight: 600;
-            width: 100%;
-            margin-top: 20px;
-            cursor: pointer;
-            display: none;
-            font-size: 1rem;
+        .btn-action {
+            background: var(--primary); color: white; border: none;
+            padding: 16px; border-radius: 18px; font-weight: 600;
+            width: 100%; margin-top: 20px; cursor: pointer; display: none;
         }
 
-        #fileList {
-            margin-top: 24px;
-            border-top: 1px solid #f1f5f9;
-            max-height: 300px;
-            overflow-y: auto;
-        }
-
-        .file-item {
-            display: flex;
-            align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid #f1f5f9;
-        }
-
-        .file-name {
-            font-size: 0.85rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            color: var(--text-muted);
-        }
-
-        #status { margin-top: 16px; font-size: 0.85rem; text-align: center; color: var(--primary); font-weight: 600; }
+        #status { margin-top: 20px; font-weight: 600; color: var(--primary); font-size: 0.85rem; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <header>
-        <h1>📦 Zip Extractor</h1>
-        <p>Preserve folder structures on mobile</p>
-    </header>
-    
-    <label class="upload-card" for="zipInput">
+<div class="app-card">
+    <div class="logo-icon">📂</div>
+    <h1>Direct Extractor</h1>
+    <p class="subtitle">Extract files directly into a folder on your device.</p>
+
+    <label class="upload-zone" for="zipInput">
         <strong>Tap to select .zip</strong>
         <input type="file" id="zipInput" accept=".zip">
     </label>
 
-    <div id="status"></div>
-    <button id="dlAllBtn" class="btn-all">Download Extracted Folder (.zip)</button>
-    <div id="fileList"></div>
+    <div id="status">Ready</div>
+    <button id="extractBtn" class="btn-action">Select Destination & Extract</button>
 </div>
 
 <script>
     const zipInput = document.getElementById('zipInput');
-    const fileListDiv = document.getElementById('fileList');
     const status = document.getElementById('status');
-    const dlAllBtn = document.getElementById('dlAllBtn');
-    let currentZipData = null;
-    let originalFileName = "extracted_folder";
+    const extractBtn = document.getElementById('extractBtn');
+    let zipData = null;
 
     zipInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        originalFileName = file.name.replace(/\.[^/.]+$/, "");
-        status.textContent = "Reading structure...";
-        fileListDiv.innerHTML = "";
-        
+        status.textContent = "Loading archive...";
         const zip = new JSZip();
         try {
-            currentZipData = await zip.loadAsync(file);
-            const files = Object.keys(currentZipData.files);
-            
-            status.textContent = `Structure loaded: ${files.length} items`;
-            dlAllBtn.style.display = "block";
-
-            files.forEach(path => {
-                const item = document.createElement('div');
-                item.className = 'file-item';
-                item.innerHTML = `<div class="file-name">${path}</div>`;
-                fileListDiv.appendChild(item);
-            });
+            zipData = await zip.loadAsync(file);
+            status.textContent = "Archive loaded. Ready to extract.";
+            extractBtn.style.display = "block";
         } catch (err) {
-            status.textContent = "Error: Invalid file.";
+            status.textContent = "Error: Invalid Zip file.";
         }
     });
 
-    dlAllBtn.onclick = async () => {
-        status.textContent = "Preparing folder download...";
-        
-        // This generates a new zip blob containing the same structure
-        const content = await currentZipData.generateAsync({type:"blob"});
-        const url = window.URL.createObjectURL(content);
-        
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${originalFileName}_extracted.zip`;
-        document.body.appendChild(a);
-        a.click();
-        
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        status.textContent = "Download started!";
+    extractBtn.onclick = async () => {
+        if (!window.showDirectoryPicker) {
+            alert("Your browser does not support direct folder access. Please use Chrome or Safari 15.2+.");
+            return;
+        }
+
+        try {
+            // 1. Ask user to pick a folder
+            const directoryHandle = await window.showDirectoryPicker();
+            status.textContent = "Extracting... Please stay on this page.";
+            
+            const files = zipData.files;
+            
+            for (const path in files) {
+                if (files[path].dir) continue;
+
+                // Split path into parts to handle subfolders
+                const parts = path.split('/');
+                const fileName = parts.pop();
+                let currentHandle = directoryHandle;
+
+                // Create subfolders if they don't exist
+                for (const part of parts) {
+                    currentHandle = await currentHandle.getDirectoryHandle(part, { create: true });
+                }
+
+                // Create file and write content
+                const fileHandle = await currentHandle.getFileHandle(fileName, { create: true });
+                const writable = await fileHandle.createWritable();
+                const content = await files[path].async("blob");
+                await writable.write(content);
+                await writable.close();
+            }
+
+            status.textContent = "✅ Extraction Complete! Check your folder.";
+        } catch (err) {
+            console.error(err);
+            status.textContent = "Extraction cancelled or failed.";
+        }
     };
 </script>
 
