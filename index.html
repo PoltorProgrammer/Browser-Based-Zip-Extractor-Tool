@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zip Extractor Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f9; display: flex; flex-direction: column; align-items: center; }
+        .container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        h2 { color: #333; margin-top: 0; }
+        input[type="file"] { margin: 20px 0; width: 100%; }
+        #fileList { margin-top: 20px; width: 100%; }
+        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .download-btn { background: #007bff; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; text-decoration: none; }
+        .download-btn:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>📦 Zip Extractor</h2>
+    <p>Select a .zip file to extract its contents.</p>
+    <input type="file" id="zipInput" accept=".zip">
+    <div id="fileList"></div>
+</div>
+
+<script>
+    document.getElementById('zipInput').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const fileListDiv = document.getElementById('fileList');
+        fileListDiv.innerHTML = 'Processing...';
+
+        const zip = new JSZip();
+        try {
+            const contents = await zip.loadAsync(file);
+            fileListDiv.innerHTML = '<strong>Files found:</strong>';
+
+            Object.keys(contents.files).forEach(filename => {
+                if (contents.files[filename].dir) return; // Skip directories
+
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = filename;
+
+                const btn = document.createElement('button');
+                btn.className = 'download-btn';
+                btn.textContent = 'Download';
+                btn.onclick = () => downloadFile(contents.files[filename]);
+
+                item.appendChild(nameSpan);
+                item.appendChild(btn);
+                fileListDiv.appendChild(item);
+            });
+        } catch (err) {
+            fileListDiv.innerHTML = 'Error: Not a valid zip file.';
+        }
+    });
+
+    async function downloadFile(zipEntry) {
+        const blob = await zipEntry.async("blob");
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = zipEntry.name.split('/').pop();
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    }
+</script>
+
+</body>
+</html>
